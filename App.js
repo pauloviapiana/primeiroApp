@@ -1,12 +1,45 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import {StyleSheet,Text,View,TextInput,TouchableOpacity,SafeAreaView,ScrollView} from 'react-native';
+
+import { SafeAreaView } from 'react-native-web';
 
 export default function App() {
+
+  const [view, setView] = useState('lista');
+  const [recipes, setRecipes] = useState([]);
+  const [title, setTitle] = useState('');
+  const [ingredients, setIngredients] = useState('');
+
+  //Efeito de Carregar as receitas do AsyncStorage quando o app inicia
+  useEffect(()=>{
+    const loadRecipes = async () => {
+      try {
+        //Tenta pegar o item salvo com a chave '@recipes
+        const storedRecipes = await AsyncStorage.getItem('@recipes')
+        //Se encontrou algo, atualiza nosso estado 'recipes' com os dados salvos
+
+        if (storedRecipes !== null){
+          setRecipes(JSON.parse(storedRecipes))
+        }
+      }
+      catch (e){
+        console.error("Falha ao carregar as receitas", e)
+      }
+    };
+    loadRecipes();
+  },[]); 
+
   return (
-    <View style={styles.container}>
-      <Text>Fellenzao</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaView>
+      <View style={styles.container}>
+
+        <Text>Fellenzao</Text>
+
+        <StatusBar style="auto" />
+
+      </View>
+    </SafeAreaView>
   );
 }
 
