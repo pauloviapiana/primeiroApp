@@ -69,6 +69,18 @@ export default function App() {
                 Adicionar nova Receita
               </Text>
             </TouchableOpacity>
+
+            {recipes.length === 0 ?(
+              <Text style={styles.emptyText}>
+                Nenhuma Receita cadastrada
+              </Text>
+            ):(
+              recipes.map((item) => (
+                <View>
+              ))
+            )
+            )}
+
           </View>
         )}
       </ScrollView>
