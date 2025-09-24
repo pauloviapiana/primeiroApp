@@ -28,10 +28,50 @@ export default function App() {
       }
     };
     loadRecipes();
-  },[]); 
+  },[]);
+
+  const handleAddRecipe = () => {
+
+    if(!title){
+      return
+    }
+  
+    const newRecipe={
+      id: Date.now().toString(),
+      title: title,
+      ingredients: ingredients,
+    }
+    
+    setRecipes(currentRecipes => [...currentRecipes, newRecipe])
+    setTitle("")
+    setIngredients("")
+    setView("lista")
+  }
+
+  const handleDeleteRecipe = (id) => {
+    setRecipes(currentRecipes => currentRecipes.filter(recipe => recipe.id !== id))
+  }
+}
+
+
+
 
   return (
     <SafeAreaView>
+      <ScrollView contentContainerStyle={style.scrollContainer}>
+        <Text style={styles.header}>
+          Meu Livro de Receitas
+        </Text>
+        {view === 'lista'?(
+          <View>
+            <TouchableOpacity style={styles.addButton} onPress={() => setView('formulario')}>
+              <Text style={styles.buttonText}>
+                Adicionar nova Receita
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
       <View style={styles.container}>
 
         <Text>Fellenzao</Text>
@@ -41,7 +81,7 @@ export default function App() {
       </View>
     </SafeAreaView>
   );
-}
+
 
 const styles = StyleSheet.create({
   container: {
