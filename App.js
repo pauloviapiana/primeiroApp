@@ -1,23 +1,31 @@
-// Importações principais do React e React Native
 import React, { useState, useEffect } from 'react';
-import {StyleSheet, Text, View, TextInput, TouchableOpacity, SafeAreaView, ScrollView,} from 'react-native';
-
-// Importa o AsyncStorage (banco de dados local do app)
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+} from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// Componente principal
 export default function App() {
-  // Estado que controla qual tela mostrar: "lista" ou "formulario"
+  // Qual tela mostrar: lista ou formulario
   const [view, setView] = useState('lista');
 
-  // Estado com a lista de receitas (array de objetos)
+  // Lista de receitas
   const [recipes, setRecipes] = useState([]);
 
-  // Estados para os campos do formulário
+  // Campos do formulário
   const [title, setTitle] = useState('');
   const [ingredients, setIngredients] = useState('');
+  const [modoDePreparo, setModoDePreparo] = useState('');
 
-  // Carrega receitas salvas ao abrir o app
+  // Estado para saber se estou editando uma receita
+  const [editingRecipe, setEditingRecipe] = useState(null);
+
+  // Carregar receitas ao iniciar
   useEffect(() => {
     const loadRecipes = async () => {
       try {
@@ -26,48 +34,70 @@ export default function App() {
           setRecipes(JSON.parse(storedRecipes));
         }
       } catch (e) {
-        console.error("Falha ao carregar receitas.", e);
+        console.error('Falha ao carregar receitas.', e);
       }
     };
     loadRecipes();
   }, []);
 
-  // Salva automaticamente as receitas sempre que a lista mudar
+  // Salvar receitas sempre que mudar
   useEffect(() => {
     const saveRecipes = async () => {
       try {
         await AsyncStorage.setItem('@recipes', JSON.stringify(recipes));
       } catch (e) {
-        console.error("Falha ao salvar receitas.", e);
+        console.error('Falha ao salvar receitas.', e);
       }
     };
     saveRecipes();
   }, [recipes]);
 
-  // Função para adicionar uma nova receita
-  const handleAddRecipe = () => {
-    if (!title) return; // Ignora se o título estiver vazio
+  // Função para adicionar ou editar
+  const handleSaveRecipe = () => {
+    if (!title) return;
 
-    const newRecipe = {
-      id: Date.now().toString(),
-      title,
-      ingredients,
-    };
+    if (editingRecipe) {
+      // Atualizar receita existente
+      setRecipes(current =>
+        current.map(r =>
+          r.id === editingRecipe.id
+            ? { ...r, title, ingredients, modoDePreparo }
+            : r
+        )
+      );
+      setEditingRecipe(null);
+    } else {
+      // Criar nova receita
+      const newRecipe = {
+        id: Date.now().toString(),
+        title,
+        ingredients,
+        modoDePreparo,
+      };
+      setRecipes(current => [...current, newRecipe]);
+    }
 
-    setRecipes(current => [...current, newRecipe]);
-
-    // Limpa os inputs e volta para a tela de lista
+    // Limpar inputs
     setTitle('');
     setIngredients('');
+    setModoDePreparo('');
     setView('lista');
   };
 
-  // Função para deletar uma receita
-  const handleDeleteRecipe = (id) => {
+  // Função para deletar
+  const handleDeleteRecipe = id => {
     setRecipes(current => current.filter(recipe => recipe.id !== id));
   };
 
-  // Renderização condicional: Lista ou Formulário
+  // Função para editar
+  const handleEditRecipe = recipe => {
+    setEditingRecipe(recipe);
+    setTitle(recipe.title);
+    setIngredients(recipe.ingredients);
+    setModoDePreparo(recipe.modoDePreparo);
+    setView('formulario');
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContainer}>
@@ -75,39 +105,50 @@ export default function App() {
 
         {view === 'lista' ? (
           <View>
-            {/* Botão para abrir o formulário */}
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => setView('formulario')}>
               <Text style={styles.buttonText}>Adicionar Nova Receita</Text>
             </TouchableOpacity>
 
-            {/* Lista de receitas ou mensagem vazia */}
             {recipes.length === 0 ? (
               <Text style={styles.emptyText}>Nenhuma receita cadastrada.</Text>
             ) : (
-              recipes.map((item) => (
+              recipes.map(item => (
                 <View key={item.id} style={styles.recipeItem}>
                   <View style={styles.recipeTextContainer}>
                     <Text style={styles.recipeTitle}>{item.title}</Text>
-                    <Text style={styles.recipeIngredients}>{item.ingredients}</Text>
+                    <Text style={styles.recipeIngredients}>
+                      Ingredientes: {item.ingredients}
+                    </Text>
+                    <Text style={styles.recipeIngredients}>
+                      Modo de Preparo: {item.modoDePreparo}
+                    </Text>
                   </View>
 
-                  {/* Botão de excluir */}
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => handleDeleteRecipe(item.id)}>
-                    <Text style={styles.buttonText}>Excluir</Text>
-                  </TouchableOpacity>
+                  <View style={styles.recipeButtons}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.editButton]}
+                      onPress={() => handleEditRecipe(item)}>
+                      <Text style={styles.buttonText}>Editar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.deleteButton]}
+                      onPress={() => handleDeleteRecipe(item.id)}>
+                      <Text style={styles.buttonText}>Excluir</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ))
             )}
           </View>
         ) : (
           <View style={styles.formContainer}>
-            <Text style={styles.formHeader}>Adicionar Receita</Text>
+            <Text style={styles.formHeader}>
+              {editingRecipe ? 'Editar Receita' : 'Adicionar Receita'}
+            </Text>
 
-            {/* Input do título */}
             <TextInput
               style={styles.input}
               placeholder="Título da Receita"
@@ -115,27 +156,41 @@ export default function App() {
               onChangeText={setTitle}
             />
 
-            {/* Input dos ingredientes */}
             <TextInput
               style={[styles.input, styles.textArea]}
               placeholder="Ingredientes"
               value={ingredients}
               onChangeText={setIngredients}
-              multiline={true}
+              multiline
             />
 
-            {/* Botões do formulário */}
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              placeholder="Modo de Preparo"
+              value={modoDePreparo}
+              onChangeText={setModoDePreparo}
+              multiline
+            />
+
             <View style={styles.formActions}>
               <TouchableOpacity
                 style={[styles.formButton, styles.cancelButton]}
-                onPress={() => setView('lista')}>
+                onPress={() => {
+                  setEditingRecipe(null);
+                  setTitle('');
+                  setIngredients('');
+                  setModoDePreparo('');
+                  setView('lista');
+                }}>
                 <Text style={styles.buttonText}>Cancelar</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={[styles.formButton, styles.saveButton]}
-                onPress={handleAddRecipe}>
-                <Text style={styles.buttonText}>Salvar</Text>
+                onPress={handleSaveRecipe}>
+                <Text style={styles.buttonText}>
+                  {editingRecipe ? 'Salvar Alterações' : 'Salvar'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -161,7 +216,6 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     color: '#e67e22',
   },
-  // Formulário
   formContainer: {
     backgroundColor: '#fff',
     padding: 20,
@@ -201,7 +255,6 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: '#27ae60',
   },
-  // Lista
   addButton: {
     backgroundColor: '#007bff',
     padding: 15,
@@ -214,13 +267,9 @@ const styles = StyleSheet.create({
     padding: 20,
     marginVertical: 8,
     borderRadius: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
   },
   recipeTextContainer: {
-    flex: 1,
-    marginRight: 15,
+    marginBottom: 10,
   },
   recipeTitle: {
     fontSize: 20,
@@ -231,11 +280,21 @@ const styles = StyleSheet.create({
     color: '#7f8c8d',
     marginTop: 5,
   },
-  deleteButton: {
-    backgroundColor: '#e74c3c',
+  recipeButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  actionButton: {
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 5,
+    marginHorizontal: 5,
+  },
+  editButton: {
+    backgroundColor: '#f39c12',
+  },
+  deleteButton: {
+    backgroundColor: '#e74c3c',
   },
   buttonText: {
     color: 'white',
