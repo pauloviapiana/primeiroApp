@@ -1,3 +1,4 @@
+//Bloco de importações
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -11,14 +12,13 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function App() {
-  // Qual tela mostrar: lista, formulario ou lixeira
+  //Estados inciais:
   const [view, setView] = useState('lista');
 
   // Lista de receitas
   const [recipes, setRecipes] = useState([]);
   // Lista da lixeira
   const [trash, setTrash] = useState([]);
-
   // Campos do formulário
   const [title, setTitle] = useState('');
   const [ingredients, setIngredients] = useState('');
@@ -142,16 +142,17 @@ export default function App() {
 
         {view === 'lista' ? (
           <View>
+            {/* Botão de lixeira no canto superior esquerdo */}
+            <TouchableOpacity
+              style={styles.trashButton}
+              onPress={() => setView('lixeira')}>
+              <Text style={styles.trashButtonText}>🗑️</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.addButton}
               onPress={() => setView('formulario')}>
               <Text style={styles.buttonText}>Adicionar Nova Receita</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: '#e74c3c' }]}
-              onPress={() => setView('lixeira')}>
-              <Text style={styles.buttonText}>Abrir Lixeira</Text>
             </TouchableOpacity>
 
             {recipes.length === 0 ? (
@@ -240,10 +241,11 @@ export default function App() {
         ) : (
           // --- Tela da Lixeira ---
           <View>
+            {/* Botão Voltar no canto superior esquerdo */}
             <TouchableOpacity
-              style={styles.addButton}
+              style={styles.trashButton}
               onPress={() => setView('lista')}>
-              <Text style={styles.buttonText}>Voltar</Text>
+              <Text style={styles.trashButtonText}>↩️</Text>
             </TouchableOpacity>
 
             {trash.length === 0 ? (
@@ -381,5 +383,20 @@ const styles = StyleSheet.create({
     marginTop: 30,
     fontSize: 18,
     color: '#95a5a6',
+  },
+  // --- Botão pequeno canto superior esquerdo ---
+  trashButton: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: '#e74c3c',
+    padding: 8,
+    borderRadius: 20,
+    zIndex: 10,
+  },
+  trashButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
