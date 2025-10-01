@@ -11,11 +11,13 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function App() {
-  // Qual tela mostrar: lista ou formulario
+  // Qual tela mostrar: lista, formulario ou lixeira
   const [view, setView] = useState('lista');
 
   // Lista de receitas
   const [recipes, setRecipes] = useState([]);
+  // Lista da lixeira
+  const [trash, setTrash] = useState([]);
 
   // Campos do formulário
   const [title, setTitle] = useState('');
@@ -25,19 +27,20 @@ export default function App() {
   // Estado para saber se estou editando uma receita
   const [editingRecipe, setEditingRecipe] = useState(null);
 
-  // Carregar receitas ao iniciar
+  // Carregar receitas e lixeira ao iniciar
   useEffect(() => {
-    const loadRecipes = async () => {
+    const loadData = async () => {
       try {
         const storedRecipes = await AsyncStorage.getItem('@recipes');
-        if (storedRecipes !== null) {
-          setRecipes(JSON.parse(storedRecipes));
-        }
+        const storedTrash = await AsyncStorage.getItem('@trash');
+
+        if (storedRecipes) setRecipes(JSON.parse(storedRecipes));
+        if (storedTrash) setTrash(JSON.parse(storedTrash));
       } catch (e) {
-        console.error('Falha ao carregar receitas.', e);
+        console.error('Falha ao carregar dados.', e);
       }
     };
-    loadRecipes();
+    loadData();
   }, []);
 
   // Salvar receitas sempre que mudar
@@ -51,6 +54,18 @@ export default function App() {
     };
     saveRecipes();
   }, [recipes]);
+
+  // Salvar lixeira sempre que mudar
+  useEffect(() => {
+    const saveTrash = async () => {
+      try {
+        await AsyncStorage.setItem('@trash', JSON.stringify(trash));
+      } catch (e) {
+        console.error('Falha ao salvar lixeira.', e);
+      }
+    };
+    saveTrash();
+  }, [trash]);
 
   // Função para adicionar ou editar
   const handleSaveRecipe = () => {
@@ -84,9 +99,31 @@ export default function App() {
     setView('lista');
   };
 
-  // Função para deletar
+  // Função para mover receita para lixeira
   const handleDeleteRecipe = id => {
-    setRecipes(current => current.filter(recipe => recipe.id !== id));
+    setRecipes(current => {
+      const recipeToDelete = current.find(r => r.id === id);
+      if (recipeToDelete) {
+        setTrash(old => [...old, recipeToDelete]);
+      }
+      return current.filter(recipe => recipe.id !== id);
+    });
+  };
+
+  // Função para restaurar da lixeira
+  const handleRestoreRecipe = id => {
+    setTrash(current => {
+      const recipeToRestore = current.find(r => r.id === id);
+      if (recipeToRestore) {
+        setRecipes(old => [...old, recipeToRestore]);
+      }
+      return current.filter(recipe => recipe.id !== id);
+    });
+  };
+
+  // Função para excluir definitivamente
+  const handlePermanentDelete = id => {
+    setTrash(current => current.filter(recipe => recipe.id !== id));
   };
 
   // Função para editar
@@ -109,6 +146,12 @@ export default function App() {
               style={styles.addButton}
               onPress={() => setView('formulario')}>
               <Text style={styles.buttonText}>Adicionar Nova Receita</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.addButton, { backgroundColor: '#e74c3c' }]}
+              onPress={() => setView('lixeira')}>
+              <Text style={styles.buttonText}>Abrir Lixeira</Text>
             </TouchableOpacity>
 
             {recipes.length === 0 ? (
@@ -143,7 +186,7 @@ export default function App() {
               ))
             )}
           </View>
-        ) : (
+        ) : view === 'formulario' ? (
           <View style={styles.formContainer}>
             <Text style={styles.formHeader}>
               {editingRecipe ? 'Editar Receita' : 'Adicionar Receita'}
@@ -193,6 +236,38 @@ export default function App() {
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        ) : (
+          // --- Tela da Lixeira ---
+          <View>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => setView('lista')}>
+              <Text style={styles.buttonText}>Voltar</Text>
+            </TouchableOpacity>
+
+            {trash.length === 0 ? (
+              <Text style={styles.emptyText}>Lixeira vazia.</Text>
+            ) : (
+              trash.map(item => (
+                <View key={item.id} style={styles.recipeItem}>
+                  <Text style={styles.recipeTitle}>{item.title}</Text>
+                  <View style={styles.recipeButtons}>
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.editButton]}
+                      onPress={() => handleRestoreRecipe(item.id)}>
+                      <Text style={styles.buttonText}>Restaurar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[styles.actionButton, styles.deleteButton]}
+                      onPress={() => handlePermanentDelete(item.id)}>
+                      <Text style={styles.buttonText}>Excluir Definitivo</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
           </View>
         )}
       </ScrollView>
